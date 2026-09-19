@@ -23,7 +23,17 @@
       "path": "app/AgentGuardHarness"
     }
   ],
-  "datasets": [],
+  "datasets": [
+    {
+      "name": "agentguard_golden",
+      "schemaType": "AGENTCORE_EVALUATION_PREDEFINED_V1",
+      "config": {
+        "managed": {
+          "location": "datasets/agentguard_golden.jsonl"
+        }
+      }
+    }
+  ],
   "capacityProviders": [],
   "payments": []
 }
