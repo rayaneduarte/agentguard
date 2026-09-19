@@ -2,7 +2,7 @@
   "name": "AgentGuardHarness",
   "model": {
     "provider": "bedrock",
-    "modelId": "global.anthropic.claude-sonnet-4-6"
+    "modelId": "google.gemma-3-4b-it"
   },
   "tools": [
     {
