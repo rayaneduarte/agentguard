@@ -1,4 +1,8 @@
+import sys
 import boto3
+
+sys.stdout.reconfigure(encoding="utf-8")
+sys.stderr.reconfigure(encoding="utf-8")
 
 from bedrock_agentcore.evaluation import (
     AgentInvokerInput,
@@ -31,8 +35,8 @@ DATASET_VERSION = "1"
 EVALUATORS = [
     "Builtin.GoalSuccessRate",
     "Builtin.Helpfulness",
+    "agentguard_AgentGuardFormatCompliance-xQkoSp6PiL",
 ]
-
 
 agentcore_client = boto3.client(
     "bedrock-agentcore",
@@ -162,7 +166,7 @@ def main():
             evaluator_ids=EVALUATORS,
         ),
         evaluation_delay_seconds=180,
-        max_concurrent_scenarios=3,
+        max_concurrent_scenarios=1,
     )
 
     print(f"Avaliadores: {', '.join(EVALUATORS)}")
