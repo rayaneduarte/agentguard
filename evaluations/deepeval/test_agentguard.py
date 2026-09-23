@@ -10,7 +10,7 @@ sys.path.insert(0, str(PROJECT_ROOT))
 from bedrock_agentcore.evaluation import AgentInvokerInput
 
 from deepeval import assert_test
-from deepeval.metrics import GEval
+from deepeval.metrics import AnswerRelevancyMetric, GEval
 from deepeval.test_case import LLMTestCase, LLMTestCaseParams
 from deepeval.models import AmazonBedrockModel
 
@@ -100,6 +100,12 @@ def test_agentguard(caso):
         actual_output=conversa_completa,
     )
 
+    answer_relevancy = AnswerRelevancyMetric(
+        threshold=0.7,
+        model=JUDGE_MODEL,
+        include_reason=True,
+    )
+
     agentguard_assertions = GEval(
         name="AgentGuard Assertions",
         criteria=(
@@ -113,13 +119,14 @@ def test_agentguard(caso):
             LLMTestCaseParams.INPUT,
             LLMTestCaseParams.ACTUAL_OUTPUT,
         ],
-        threshold=0.7,
+        threshold=0.8,
         model=JUDGE_MODEL,
     )
 
     assert_test(
         test_case,
         metrics=[
+            answer_relevancy,
             agentguard_assertions,
         ],
         run_async=False,
