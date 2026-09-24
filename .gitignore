@@ -2,3 +2,4 @@ agentcore/.cli/
 __pycache__/
 *.pyc
 .deepeval/
+.env
