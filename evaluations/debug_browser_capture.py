@@ -57,12 +57,6 @@ session_id = str(uuid.uuid4())
 response = client.invoke_harness(
     harnessArn=HARNESS_ARN,
     runtimeSessionId=session_id,
-    model={
-        "bedrockModelConfig": {
-            "modelId": MODEL_ID,
-            "apiFormat": "converse_stream",
-        }
-    },
     messages=[
         {
             "role": "user",
@@ -70,7 +64,6 @@ response = client.invoke_harness(
         }
     ],
 )
-
 
 # ============================================================
 # Captura do stream e do conteúdo recuperado pelo Browser
