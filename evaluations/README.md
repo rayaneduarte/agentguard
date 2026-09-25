@@ -1,23 +1,24 @@
 # AgentCore Evaluations — AgentGuard
 
-Este documento registra o processo utilizado para avaliar a **Baseline v1 do AgentGuard** utilizando o Amazon Bedrock AgentCore Evaluations.
+Este documento registra o processo completo utilizado para avaliar o AgentGuard com o Amazon Bedrock AgentCore Evaluations, desde a execução da baseline até a reavaliação da versão final após o hardening.
 
-O objetivo desta etapa foi executar o Golden Dataset do projeto contra o mesmo agente desenvolvido no AgentCore Harness, utilizando:
+A avaliação utiliza:
 
 - dois avaliadores integrados do AgentCore;
 - um avaliador customizado baseado em código;
-- rastreamento das execuções por meio dos traces/spans do AgentCore;
-- execução dos 20 cenários do Golden Dataset.
+- rastreamento das execuções por meio de traces/spans;
+- os 20 cenários do Golden Dataset;
+- execução serial dos cenários para evitar o comportamento anômalo observado durante testes concorrentes.
 
-Além dos passos necessários para reproduzir a avaliação, este documento registra os principais problemas encontrados durante a configuração e as soluções aplicadas.
+Além dos passos necessários para reproduzir a avaliação, este documento registra os principais problemas encontrados durante a configuração, as soluções aplicadas e a comparação entre baseline e versão final.
 
 ---
 
-## 1. Objetivo da avaliação
+# 1. Objetivo da avaliação
 
 O AgentGuard é um agente especializado em analisar prompts e identificar possíveis ataques ou comportamentos suspeitos direcionados a sistemas de IA.
 
-A Baseline v1 utiliza as seguintes categorias:
+As categorias utilizadas são:
 
 - `SEGURO`
 - `PROMPT_INJECTION`
@@ -33,7 +34,9 @@ Para cada análise, espera-se que o agente apresente:
 - justificativa;
 - ação recomendada.
 
-A avaliação foi realizada antes de qualquer melhoria na Baseline v1. Dessa forma, os erros encontrados poderão posteriormente ser utilizados para modificar o agente e comparar os resultados **Baseline vs. versão final**.
+A primeira execução foi realizada sobre a Baseline v1. As falhas encontradas nessa etapa foram posteriormente combinadas com os resultados do DeepEval e da campanha de Red Teaming para orientar o hardening do system prompt.
+
+Após o hardening, o AgentCore Evaluations foi executado novamente sobre a versão final, permitindo a comparação entre as duas versões.
 
 ---
 
@@ -902,53 +905,230 @@ convert_golden.py
 
 ---
 
-# 27. Estado da Baseline após AgentCore Evaluations
+# 27. Hardening após a Baseline
 
-A Baseline v1 **não foi modificada durante esta etapa**.
+As falhas identificadas no AgentCore Evaluations foram analisadas em conjunto com os resultados do DeepEval e da campanha estruturada de Red Teaming.
 
-Isso foi intencional.
+Os principais problemas observados incluíram:
 
-As falhas identificadas serão combinadas posteriormente com:
+- falsos positivos em conteúdo educacional;
+- confusão entre categorias de segurança;
+- tratamento inadequado de solicitações fora do escopo;
+- alegações de uso de ferramenta sem evidência suficiente;
+- aceitação de premissas sem evidência;
+- dificuldade em lidar com pedidos de garantia absoluta de segurança;
+- inconsistências relacionadas ao contexto e ao contrato de saída.
 
-- resultados do DeepEval;
-- campanha formal de Red Teaming.
+Com base nesses achados, o `system-prompt.md` foi reforçado com regras mais explícitas sobre escopo, taxonomia, evidência, conteúdo externo, uso do Browser, proteção das instruções internas e tratamento de interações multi-turno.
 
-Somente após reunir essas evidências serão implementadas melhorias como:
+O Golden Dataset foi mantido com os mesmos 20 cenários para permitir a comparação entre baseline e versão final.
 
-- refinamento do system prompt;
-- melhor separação entre categorias;
-- tratamento de solicitações fora do escopo;
-- restrições sobre alegações de uso de ferramentas;
-- melhoria do tratamento de contexto;
-- mitigação de alucinações;
-- reforço contra prompt injection e jailbreak.
+---
 
-Depois das correções, as avaliações serão executadas novamente para permitir a comparação:
+# 28. Reavaliação da versão final
+
+Após o hardening, o AgentCore Evaluations foi executado novamente sobre a configuração final do AgentGuard.
+
+Foram mantidos os três avaliadores:
 
 ```text
-Baseline v1
-      ↓
-falhas identificadas
-      ↓
-melhorias
-      ↓
-versão final
-      ↓
-reavaliação
-      ↓
-Baseline vs. Final
+Builtin.GoalSuccessRate
+Builtin.Helpfulness
+AgentGuardFormatCompliance
+```
+
+A execução permaneceu serial:
+
+```python
+max_concurrent_scenarios=1
+```
+
+O resultado final do `GoalSuccessRate` foi:
+
+| Versão | Casos aprovados | Taxa |
+|---|---:|---:|
+| Baseline | 7/20 | 35% |
+| Final | 13/20 | 65% |
+
+Isso corresponde a uma variação de **+30 pontos percentuais** no conjunto avaliado.
+
+Os resultados completos estão preservados em:
+
+```text
+evaluations/agentcore/nova-baseline-results.txt
+evaluations/agentcore/nova-final-results.txt
 ```
 
 ---
 
-# 28. Próxima etapa
+# 29. Limitação metodológica da comparação
 
-Com a avaliação da Baseline v1 no AgentCore concluída, a próxima frente de avaliação será o **DeepEval**.
+A comparação entre as execuções do AgentCore possui uma limitação metodológica importante.
 
-Serão utilizadas as métricas exigidas pelo desafio:
+Na execução final, o runner passou a remover blocos `<thinking>` da resposta antes de fornecer o `agent_output` ao processo de avaliação. A baseline não utilizava exatamente o mesmo tratamento.
 
-- Answer Relevancy;
-- Faithfulness;
-- G-Eval para compliance.
+Consequentemente, a diferença observada entre 35% e 65% não deve ser atribuída exclusivamente ao hardening do system prompt.
 
-Depois, os resultados dos dois ecossistemas serão comparados antes do início da campanha formal de Red Teaming.
+Essa limitação é mantida explicitamente na análise para evitar interpretar a variação como efeito causal isolado das alterações no prompt.
+
+Além disso, foram observados erros técnicos do evaluator customizado em alguns cenários envolvendo ferramentas. Por esse motivo, o `GoalSuccessRate` foi utilizado como principal referência quantitativa para a comparação do AgentCore Evaluations.
+
+---
+
+# 30. Interpretação dos resultados
+
+A versão final apresentou maior aderência aos critérios esperados no conjunto avaliado, mas não eliminou todos os problemas.
+
+Persistiram casos relacionados principalmente a:
+
+- diferenciação entre categorias próximas;
+- vazamento de informações versus jailbreak;
+- indirect prompt injection;
+- solicitações fora do escopo;
+- garantias absolutas de segurança;
+- comportamento associado ao uso de ferramentas.
+
+Também permanece a limitação do `Builtin.Helpfulness`: em um agente de segurança, recusar ou não cumprir uma solicitação maliciosa pode ser exatamente o comportamento desejado, mesmo que isso resulte em menor helpfulness.
+
+Por esse motivo, os avaliadores devem ser interpretados em conjunto e não como medidas isoladas de segurança.
+
+---
+
+# 31. Como reproduzir a avaliação atual
+
+Instale as dependências Python a partir da raiz do projeto:
+
+```powershell
+python -m pip install -r requirements.txt
+```
+
+Crie o `.env` a partir do arquivo de exemplo:
+
+```powershell
+Copy-Item .env.example .env
+```
+
+Configure no `.env` os identificadores correspondentes aos recursos implantados no seu próprio ambiente AWS:
+
+```env
+AWS_REGION=us-east-1
+
+AGENTGUARD_HARNESS_ARN=your-harness-arn-here
+AGENTGUARD_LOG_GROUP=your-cloudwatch-log-group-here
+AGENTGUARD_DATASET_ID=your-dataset-id-here
+AGENTGUARD_CUSTOM_EVALUATOR_ID=your-custom-evaluator-id-here
+```
+
+O `.env` não deve ser versionado.
+
+Com o Harness, o dataset, os evaluators e a observabilidade configurados no AgentCore, execute:
+
+```powershell
+python evaluations/run_agentcore_evals.py
+```
+
+A execução atual utiliza a configuração final do AgentGuard e a versão publicada do Golden Dataset definida no runner.
+
+Para preservar a saída no PowerShell e, ao mesmo tempo, acompanhar a execução no terminal:
+
+```powershell
+Remove-Item "evaluations/agentcore/nova-final-results.txt" -ErrorAction SilentlyContinue
+
+python evaluations/run_agentcore_evals.py 2>&1 |
+ForEach-Object {
+    $_
+    $_ | Out-File -FilePath "evaluations/agentcore/nova-final-results.txt" -Encoding utf8 -Append
+}
+```
+
+Esse comando sobrescreve o arquivo de resultado final existente. Utilize-o somente quando a intenção for registrar uma nova execução.
+
+---
+
+# 32. Pré-requisitos de observabilidade
+
+O runner depende dos traces/spans produzidos pelas execuções do Harness.
+
+No ambiente utilizado neste projeto foi necessário:
+
+```text
+Harness
+   ↓
+traces / spans
+   ↓
+CloudWatch Logs
+   ↓
+Transaction Search
+   ↓
+AgentCore Evaluations
+```
+
+Durante a configuração foram necessários:
+
+- CloudWatch Transaction Search;
+- ingestão dos spans;
+- destino dos segmentos do X-Ray configurado como `CloudWatchLogs`;
+- Resource Policy permitindo o envio dos eventos necessários;
+- região correta dos recursos (`us-east-1`).
+
+Os detalhes e problemas encontrados durante essa configuração estão registrados nas seções anteriores deste documento.
+
+Essas configurações são específicas da conta e do ambiente AWS utilizado. Identificadores de recursos, ARNs e credenciais não são versionados como parte das instruções de reprodução.
+
+---
+
+# 33. Artefatos finais
+
+Os principais artefatos relacionados ao AgentCore Evaluations são:
+
+```text
+datasets/
+└── golden-dataset.json
+
+agentcore/
+└── datasets/
+    └── agentguard_golden.jsonl
+
+evaluations/
+├── README.md
+├── baseline-vs-final.md
+├── run_agentcore_evals.py
+├── agentcore/
+│   ├── nova-baseline-results.txt
+│   └── nova-final-results.txt
+└── custom_evaluator/
+    └── lambda_function.py
+```
+
+A comparação consolidada entre baseline e versão final está disponível em:
+
+```text
+evaluations/baseline-vs-final.md
+```
+
+---
+
+# 34. Resultado consolidado
+
+O ciclo realizado no AgentCore Evaluations foi:
+
+```text
+Baseline v1
+    ↓
+20 cenários do Golden Dataset
+    ↓
+AgentCore Evaluations
+    ↓
+análise das falhas
+    ↓
+DeepEval + Red Teaming
+    ↓
+hardening
+    ↓
+reavaliação
+    ↓
+Baseline: 35%
+Final: 65%
+```
+
+Os resultados representam exclusivamente o comportamento observado no conjunto de cenários e nas condições avaliadas. Eles não constituem garantia de segurança ou invulnerabilidade do AgentGuard.
