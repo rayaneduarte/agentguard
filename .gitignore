@@ -3,3 +3,4 @@ __pycache__/
 *.pyc
 .deepeval/
 .env
+agentcore/aws-targets.json

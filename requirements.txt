@@ -1,0 +1,6 @@
+bedrock-agentcore==1.23.1
+boto3==1.43.75
+deepeval==4.2.0
+python-dotenv==1.2.3
+pytest==9.1.1
+portalocker==4.3.0

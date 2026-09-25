@@ -1,6 +1,10 @@
-import sys
+import os
 import re
+import sys
 import boto3
+
+from dotenv import load_dotenv
+from pathlib import Path
 
 sys.stdout.reconfigure(encoding="utf-8")
 sys.stderr.reconfigure(encoding="utf-8")
@@ -17,26 +21,44 @@ from bedrock_agentcore.evaluation import (
 )
 
 
-REGION = "us-east-1"
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
-HARNESS_ARN = (
-    "arn:aws:bedrock-agentcore:us-east-1:814650855304:"
-    "harness/agentguard_AgentGuardHarness-ILJDUaomOZ"
-)
+load_dotenv(PROJECT_ROOT / ".env")
 
-LOG_GROUP = (
-    "/aws/bedrock-agentcore/runtimes/"
-    "harness_agentguard_AgentGuardHarness-GZo8bpGnin-DEFAULT"
-)
+REGION = os.getenv("AWS_REGION", "us-east-1")
+
+HARNESS_ARN = os.getenv("AGENTGUARD_HARNESS_ARN")
+LOG_GROUP = os.getenv("AGENTGUARD_LOG_GROUP")
+DATASET_ID = os.getenv("AGENTGUARD_DATASET_ID")
+CUSTOM_EVALUATOR_ID = os.getenv("AGENTGUARD_CUSTOM_EVALUATOR_ID")
 
 DATASET_NAME = "agentguard_golden"
-DATASET_ID = "agentguard_agentguard_golden-t3EGtqBLkb"
 DATASET_VERSION = "1"
+
+required_variables = {
+    "AGENTGUARD_HARNESS_ARN": HARNESS_ARN,
+    "AGENTGUARD_LOG_GROUP": LOG_GROUP,
+    "AGENTGUARD_DATASET_ID": DATASET_ID,
+    "AGENTGUARD_CUSTOM_EVALUATOR_ID": CUSTOM_EVALUATOR_ID,
+}
+
+missing_variables = [
+    name
+    for name, value in required_variables.items()
+    if not value
+]
+
+if missing_variables:
+    raise RuntimeError(
+        "Variáveis de ambiente ausentes: "
+        + ", ".join(missing_variables)
+        + ". Configure-as no arquivo .env da raiz do projeto."
+    )
 
 EVALUATORS = [
     "Builtin.GoalSuccessRate",
     "Builtin.Helpfulness",
-    "agentguard_AgentGuardFormatCompliance-xQkoSp6PiL",
+    CUSTOM_EVALUATOR_ID,
 ]
 
 agentcore_client = boto3.client(
