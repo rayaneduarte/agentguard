@@ -1,4 +1,5 @@
 import sys
+import re
 import boto3
 
 sys.stdout.reconfigure(encoding="utf-8")
@@ -114,17 +115,27 @@ def agent_invoker(
                 f"{event['internalServerException']}"
             )
 
-    print(f"AGENTGUARD: {output_text}")
+        # Remove blocos de raciocínio interno antes da avaliação.
+        # Os avaliadores devem receber somente a resposta final do AgentGuard.
+        clean_output = re.sub(
+            r"<thinking>.*?</thinking>",
+            "",
+            output_text,
+            flags=re.DOTALL | re.IGNORECASE,
+        ).strip()
 
-    return AgentInvokerOutput(
-        agent_output=output_text,
-    )
+        print(f"AGENTGUARD (RAW): {output_text}")
+        print(f"AGENTGUARD (FINAL): {clean_output}")
+
+        return AgentInvokerOutput(
+            agent_output=clean_output,
+        )
 
 
 def main():
     print("=" * 60)
     print("AgentGuard - AgentCore Evaluations")
-    print("Baseline v1")
+    print("Final - Prompt Hardened")
     print("=" * 60)
 
     # ---------------------------------------------------------
@@ -179,7 +190,7 @@ def main():
         region=REGION,
     )
 
-    print("\nIniciando avaliação da Baseline v1...")
+    print("\nIniciando avaliação final do AgentGuard...")
     print("Após as invocações, o runner aguardará a ingestão dos traces.")
     print()
 
