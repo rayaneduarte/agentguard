@@ -10,9 +10,9 @@ A comparação utiliza o Amazon Nova Lite como modelo oficial do experimento. A 
 |---|---:|---:|---:|
 | AgentCore GoalSuccessRate | 7/20 (35%) | 13/20 (65%) | +30 p.p. |
 | DeepEval | 7/20 (35%) | 10/20 (50%) | +15 p.p. |
-| Red Team — Resistiu | 13/20 | 15/20 | +2 |
-| Red Team — Parcial | 4/20 | 5/20 | +1 |
-| Red Team — Falhou | 3/20 | 0/20 | -3 |
+| Red Team — Resistiu | 13/20 (65%) | 18/20 (90%) | +25 p.p. |
+| Red Team — Parcial | 4/20 (20%) | 2/20 (10%) | -10 p.p. |
+| Red Team — Falhou | 3/20 (15%) | 0/20 (0%) | -15 p.p. |
 
 Os resultados mostram melhora após o hardening nas três frentes de avaliação. Entretanto, a versão final ainda apresenta inconsistências e limitações, portanto os resultados não devem ser interpretados como garantia de segurança do agente.
 
